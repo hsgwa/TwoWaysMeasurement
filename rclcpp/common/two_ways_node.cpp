@@ -1,5 +1,5 @@
 #include <rclcpp/strategies/message_pool_memory_strategy.hpp>
-#include <rttest/utils.h>
+#include <rttest/utils.hpp>
 #include "two_ways_node.hpp"
 
 using rclcpp::strategies::message_pool_memory_strategy::MessagePoolMemoryStrategy;
@@ -81,7 +81,7 @@ void TwoWaysNode::setup_ping_publisher()
         subtract_timespecs(&time_wake_ts, &last_wake_ts_, &diff_from_last_wakeup_ts);
         // minus period because distribution mean is period_ns.
         subtract_timespecs(&diff_from_last_wakeup_ts, &period_ts_, &diff_from_last_wakeup_ts);
-        diff_wakeup_report_.add(_timespec_to_long(&diff_from_last_wakeup_ts));
+        diff_wakeup_report_.add(_timespec_to_uint64(&diff_from_last_wakeup_ts));
 
         // prepere to next
         add_timespecs(&epoch_ts_, &period_ts_, &expect_ts_);
@@ -103,15 +103,15 @@ void TwoWaysNode::setup_ping_publisher()
           std::cout << "time_print.tv_sec: " << time_print.tv_sec << " "
                     << "time_print.tv_nsec: " << time_print.tv_nsec << std::endl;
           std::cout << "sent ping id = " << ping_pub_count_
-                    << " @" << _timespec_to_long(&time_print)
-                    << " waked up @ " << _timespec_to_long(&time_wake_ts)
+                    << " @" << _timespec_to_uint64(&time_print)
+                    << " waked up @ " << _timespec_to_uint64(&time_wake_ts)
                     << std::endl;
         }
 
         struct timespec time_exit;
         getnow(&time_exit);
         subtract_timespecs(&time_exit, &time_wake_ts, &time_exit);
-        timer_callback_process_time_report_.add(_timespec_to_long(&time_exit));
+        timer_callback_process_time_report_.add(_timespec_to_uint64(&time_exit));
 
         if(ping_pub_count_ == num_loops) {
           std::raise(SIGINT);
@@ -146,7 +146,7 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
       {
         struct timespec now_ts;
         getnow(&now_ts);
-        auto now_ns = _timespec_to_long(&now_ts);
+        auto now_ns = _timespec_to_uint64(&now_ts);
         if (ping_sub_report_.add(now_ns - msg->time_sent_ns)) {
           ping_argmax_ = msg->data;
         }
@@ -188,7 +188,7 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
         struct timespec time_exit;
         getnow(&time_exit);
         subtract_timespecs(&time_exit, &now_ts, &time_exit);
-        ping_callback_process_time_report_.add(_timespec_to_long(&time_exit));
+        ping_callback_process_time_report_.add(_timespec_to_uint64(&time_exit));
       };
 
   rclcpp::SubscriptionOptions subscription_options;
@@ -224,7 +224,7 @@ void TwoWaysNode::setup_pong_subscriber()
         struct timespec now;
         getnow(&now);
 
-        auto now_ns = _timespec_to_long(&now);
+        auto now_ns = _timespec_to_uint64(&now);
         if (ping_pong_report_.add(now_ns - msg->time_sent_ns)) {
           pong_argmax_ = msg->data;
         }
@@ -243,7 +243,7 @@ void TwoWaysNode::setup_pong_subscriber()
         struct timespec time_exit;
         getnow(&time_exit);
         subtract_timespecs(&time_exit, &now, &time_exit);
-        pong_callback_process_time_report_.add(_timespec_to_long(&time_exit));
+        pong_callback_process_time_report_.add(_timespec_to_uint64(&time_exit));
       };
   rclcpp::SubscriptionOptions subscription_options;
   pong_sub_ = create_subscription<twmsgs::msg::Data>(topic_name_pong,
@@ -256,5 +256,5 @@ int64_t TwoWaysNode::get_now_int64()
 {
   struct timespec now_ts;
   getnow(&now_ts);
-  return _timespec_to_long(&now_ts);
+  return _timespec_to_uint64(&now_ts);
 }

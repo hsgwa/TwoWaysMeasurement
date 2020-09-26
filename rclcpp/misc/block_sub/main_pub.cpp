@@ -5,7 +5,7 @@
 #include <thread>
 
 #include <rclcpp/rclcpp.hpp>
-#include <rttest/utils.h>
+#include <rttest/utils.hpp>
 #include "common/tw_node_options.hpp"
 #include "common/tw_utils.hpp"
 #include "twmsgs/msg/data.hpp"
@@ -26,7 +26,7 @@ public:
           struct timespec time_wake_ts;
           getnow(&time_wake_ts);
 
-          msg_->time_sent_ns = timespec_to_long(&time_wake_ts);
+          msg_->time_sent_ns = timespec_to_uint64(&time_wake_ts);
           msg_->data = count_;
 
           ping_pub_->publish(*msg_);

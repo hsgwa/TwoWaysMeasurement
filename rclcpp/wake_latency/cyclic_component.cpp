@@ -2,7 +2,7 @@
 #include <fstream>
 #include <thread>
 
-#include <rttest/utils.h>
+#include <rttest/utils.hpp>
 
 #include "cyclic_component.hpp"
 
@@ -50,14 +50,14 @@ CyclicNode::CyclicNode(const rclcpp::NodeOptions & options)
         subtract_timespecs(&now_rt, &expect_rt_, &now_expect_diff_rt);
 
         os_ << count_ << ", "
-            << timespec_to_long(&now_ts) << ", "
-            << timespec_to_long(&now_rt) << ", "
-            << timespec_to_long(&expect_ts_) << ", "
-            << timespec_to_long(&last_fin_ts_) << ", "
-            << timespec_to_long(&now_expect_diff_ts) << ", "
-            << timespec_to_long(&now_expect_diff_rt) << ", "
-            << timespec_to_long(&now_last_now_diff_ts) << ", "
-            << timespec_to_long(&now_last_fin_diff_ts)
+            << timespec_to_uint64(&now_ts) << ", "
+            << timespec_to_uint64(&now_rt) << ", "
+            << timespec_to_uint64(&expect_ts_) << ", "
+            << timespec_to_uint64(&last_fin_ts_) << ", "
+            << timespec_to_uint64(&now_expect_diff_ts) << ", "
+            << timespec_to_uint64(&now_expect_diff_rt) << ", "
+            << timespec_to_uint64(&now_last_now_diff_ts) << ", "
+            << timespec_to_uint64(&now_last_fin_diff_ts)
             << std::endl;
 
         /*

@@ -76,7 +76,7 @@ inline void getnow(struct timespec *t, bool uses_clock_monotonic_raw = false)
   clock_gettime(clock, t);
 }
 
-inline int64_t _timespec_to_long(const struct timespec *t)
+inline int64_t _timespec_to_uint64(const struct timespec *t)
 {
   const int64_t nsec_per_sec = 1000 * 1000 * 1000;
   return (int64_t)t->tv_sec * nsec_per_sec + (int64_t)t->tv_nsec;

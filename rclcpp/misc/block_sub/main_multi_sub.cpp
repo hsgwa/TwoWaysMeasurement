@@ -5,7 +5,7 @@
 #include <thread>
 
 #include <rclcpp/rclcpp.hpp>
-#include <rttest/utils.h>
+#include <rttest/utils.hpp>
 #include "common/tw_node_options.hpp"
 #include "common/tw_utils.hpp"
 #include "twmsgs/msg/data.hpp"
@@ -27,7 +27,7 @@ public:
           getnow(&now);
 
           std::cout << "sub" << index_
-                    << " latency = " << timespec_to_long(&now) - time_sent
+                    << " latency = " << timespec_to_uint64(&now) - time_sent
                     << " count = " << msg->data
                     << std::endl;
           // a long procedure
