@@ -4,6 +4,7 @@
 #include <vector>
 #include <numeric>
 #include <thread>
+#include <sched.h>
 
 #include "../common/tw_utils.hpp"
 #include "../common/two_ways_node.hpp"
@@ -203,6 +204,18 @@ make_runner(RunType type, rclcpp::executor::Executor::SharedPtr e)
   return p;
 }
 
+void set_affinity(const pthread_t &thread, int core_num) {
+  cpu_set_t cpu_set;
+
+  CPU_ZERO(&cpu_set);
+  CPU_SET(core_num, &cpu_set);
+
+  int result = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpu_set);
+  if (result != 0) {
+    std::cout << "failed to set affinity" << std::endl;
+  }
+}
+
 int main(int argc, char *argv[])
 {
   std::cout << "Press C-c to quit" << std::endl;
@@ -218,6 +231,8 @@ int main(int argc, char *argv[])
   int policy = 0;
   tw_options.get_child_thread_policy(priority, policy);
   set_sched_priority("child", priority, policy);
+
+  set_affinity(pthread_self(), 1);
 
   rclcpp::init(argc, argv);
 
@@ -276,6 +291,8 @@ int main(int argc, char *argv[])
 
     std::thread th_ping(&rclcpp::Executor::spin, exec_ping);
     std::thread th_pong(&rclcpp::Executor::spin, exec_pong);
+    set_affinity(th_ping.native_handle(), 2);
+    set_affinity(th_pong.native_handle(), 2);
 
     osrf_testing_tools_cpp::memory_tools::expect_no_malloc_begin();
     th_ping.join();
