@@ -3,6 +3,7 @@
 #include <time.h>
 #include <vector>
 #include <numeric>
+#include <thread>
 
 #include "rclcpp/rclcpp.hpp"
 #include "../common/two_ways_node.hpp"
@@ -190,6 +191,10 @@ make_runner(RunType type, rclcpp::executor::Executor::SharedPtr e)
       p.reset(new Runner_2e_pong(e));
       break;
     }
+    default: {
+      // TODO: add T2N2 comment
+      break;
+    }
   }
 
   return p;
@@ -212,20 +217,47 @@ int main(int argc, char *argv[])
   set_sched_priority("child", priority, policy);
 
   rclcpp::init(argc, argv);
-  auto exec = tw_options.get_executor();
 
-  auto runner = make_runner(tw_options.run_type, exec);
-  runner->setup(tw_options);
+  if(tw_options.run_type != T2N2) {
+    auto exec = tw_options.get_executor();
 
-  // setup child process scheule
-  tw_options.get_main_thread_policy(priority, policy);
-  set_sched_priority("main", priority, policy);
+    auto runner = make_runner(tw_options.run_type, exec);
+    runner->setup(tw_options);
 
-  exec->spin();
+    // setup child process scheule
+    tw_options.get_main_thread_policy(priority, policy);
+    set_sched_priority("main", priority, policy);
 
-  runner->cleanup();
+    exec->spin();
 
-  runner->report();
+    runner->cleanup();
+    runner->report();
+  } else {
+    tw_options.run_type = E2_PING;
+    auto exec_ping = tw_options.get_executor();
+    auto runner_ping = make_runner(tw_options.run_type, exec_ping);
+    runner_ping->setup(tw_options);
+
+    tw_options.run_type = E2_PONG;
+    auto exec_pong = tw_options.get_executor();
+    auto runner_pong = make_runner(tw_options.run_type, exec_pong);
+    runner_pong->setup(tw_options);
+
+    // setup child process scheule
+    tw_options.get_main_thread_policy(priority, policy);
+    set_sched_priority("main", priority, policy);
+
+    std::thread th_ping(&rclcpp::Executor::spin, exec_ping);
+    std::thread th_pong(&rclcpp::Executor::spin, exec_pong);
+
+    th_ping.join();
+    th_pong.join();
+
+    runner_ping->cleanup();
+    runner_ping->report();
+    runner_pong->cleanup();
+    runner_pong->report();
+  }
 
   rclcpp::shutdown();
 }

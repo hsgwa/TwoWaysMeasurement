@@ -199,7 +199,11 @@ RunType TwoWaysNodeOptions::parse_run_type(const std::string &type)
     return E2_PING;
   } else if(type == "2e_pong") {
     return E2_PONG;
+  } else if (type == "2t2n") {
+    return T2N2;
   } else {
+    // TODO: add 2t2n to comment
+    // TODO: mod thread name to 1e1n etc.
     throw std::invalid_argument("unknown run-type: 1e1n, 1e2n, 2e_ping, 2e_pong");
   }
 }
