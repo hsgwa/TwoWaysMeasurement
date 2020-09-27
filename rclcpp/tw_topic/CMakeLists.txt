@@ -23,6 +23,9 @@ find_package(twmsgs REQUIRED)
 find_package(rosidl_generator_cpp REQUIRED)
 find_package(tlsf_cpp)
 find_package(rttest)
+find_package(osrf_testing_tools_cpp REQUIRED)
+
+add_compile_options(-O0 -rdynamic)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -57,6 +60,10 @@ set(DEPENDS
 set(TW_PING_PONG tw_ping_pong)
 add_executable(${TW_PING_PONG} main_ping_pong.cpp ${TW_COMMON})
 ament_target_dependencies(${TW_PING_PONG} ${DEPENDS})
+target_link_libraries(${TW_PING_PONG}
+  osrf_testing_tools_cpp::memory_tools
+  )
+ 
 
 install(TARGETS
   ${TW_PING_PONG}
