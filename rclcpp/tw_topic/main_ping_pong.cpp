@@ -5,6 +5,7 @@
 #include <numeric>
 #include <thread>
 #include <sched.h>
+#include <sys/resource.h>
 
 #include "../common/tw_utils.hpp"
 #include "../common/two_ways_node.hpp"
@@ -204,6 +205,33 @@ make_runner(RunType type, rclcpp::executor::Executor::SharedPtr e)
   return p;
 }
 
+class RusageCounter {
+ public:
+  void start() {
+    update(&start_);
+  }
+  void end() {
+    update(&end_);
+  }
+  void report() {
+    std::cout << "major pagefault : " << end_.ru_majflt - start_.ru_majflt << std::endl;
+    std::cout << "minor pagefault : " << end_.ru_minflt - start_.ru_minflt << std::endl;
+    std::cout << "swap : " << end_.ru_nswap - start_.ru_nswap << std::endl;
+    std::cout << "voluntary context switch : " << end_.ru_nvcsw - start_.ru_nvcsw << std::endl;
+    std::cout << "involuntary context switch : " << end_.ru_nivcsw - start_.ru_nivcsw << std::endl;
+  }
+
+ private:
+  void update(rusage *usage) {
+    int result = getrusage(RUSAGE_SELF, usage);
+    if (result != 0) {
+      std::cerr << "failed to set affinity" << std::endl;
+    }
+  }
+  struct rusage start_;
+  struct rusage end_;
+};
+
 void set_affinity(const pthread_t &thread, int core_num) {
   cpu_set_t cpu_set;
 
@@ -236,6 +264,7 @@ int main(int argc, char *argv[])
 
   rclcpp::init(argc, argv);
 
+
   osrf_testing_tools_cpp::memory_tools::initialize();
   OSRF_TESTING_TOOLS_CPP_SCOPE_EXIT({
     osrf_testing_tools_cpp::memory_tools::uninitialize();
@@ -256,6 +285,7 @@ int main(int argc, char *argv[])
   osrf_testing_tools_cpp::memory_tools::on_unexpected_malloc(on_unexpected_memory);
   osrf_testing_tools_cpp::memory_tools::on_unexpected_realloc(on_unexpected_memory);
 
+  RusageCounter rusageCounter;
 
   if(tw_options.run_type != T2N2) {
     auto exec = tw_options.get_executor();
@@ -267,12 +297,15 @@ int main(int argc, char *argv[])
     tw_options.get_main_thread_policy(priority, policy);
     set_sched_priority("main", priority, policy);
 
+    rusageCounter.start();
     osrf_testing_tools_cpp::memory_tools::expect_no_malloc_begin();
     exec->spin();
     osrf_testing_tools_cpp::memory_tools:: expect_no_malloc_end();
+    rusageCounter.end();
 
     runner->cleanup();
     runner->report();
+    rusageCounter.report();
 
   } else {
     tw_options.run_type = E2_PING;
@@ -293,15 +326,21 @@ int main(int argc, char *argv[])
     std::thread th_pong(&rclcpp::Executor::spin, exec_pong);
     set_affinity(th_ping.native_handle(), 2);
     set_affinity(th_pong.native_handle(), 2);
+    rusageCounter.start();
 
     osrf_testing_tools_cpp::memory_tools::expect_no_malloc_begin();
     th_ping.join();
     th_pong.join();
     osrf_testing_tools_cpp::memory_tools::expect_no_malloc_end();
+
+    rusageCounter.end();
+
     runner_ping->cleanup();
     runner_ping->report();
     runner_pong->cleanup();
     runner_pong->report();
+
+    rusageCounter.report();
   }
 
   rclcpp::shutdown();
