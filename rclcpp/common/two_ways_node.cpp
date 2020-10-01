@@ -196,7 +196,6 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
       };
 
   rclcpp::SubscriptionOptions subscription_options;
-  std::cout << "don't use TLSF Allocator for subscription" << std::endl;
   ping_sub_ = create_subscription<twmsgs::msg::Data>(
       topic_name, qos, callback_sub, subscription_options);
 }
