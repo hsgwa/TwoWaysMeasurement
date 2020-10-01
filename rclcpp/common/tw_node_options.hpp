@@ -2,42 +2,17 @@
 #define SETTING_H_
 
 #include <sched.h>
+#include <string>
 
 #include <rclcpp/qos.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include "thread_options.hpp"
 
 struct JitterReportOptions
 {
   int bin;
   int round_ns;
   int num_skip;
-};
-
-#define SET_REALTIME_SETTING_RRRR(tw_option) \
-  if (tw_options.sched_rrrr > 0) { \
-    std::cout << "rrrr" << std::endl; \
-    if (!tw_options.set_realtime_settings()) { \
-      std::cerr << "set_realtime_setting failed" << std::endl; \
-      return -1; \
-    } \
-  }
-
-#define SET_REALTIME_SETTING_RRTS(tw_option) \
-  if (tw_options.sched_rrts > 0) { \
-    std::cout << "rrts" << std::endl; \
-    if (!tw_options.set_realtime_settings()) { \
-      std::cerr << "set_realtime_setting failed" << std::endl; \
-      return -1; \
-    } \
-  }
-
-// TODO create table of SCHED_POLICY, option args, policy, priproty
-// such as (RR98, "RR98", SCHED_RR, 98),
-// and unify get_sched_policy() and get_sched()
-enum SCHED_POLICY {
-  RR98,
-  RR97,
-  TS
 };
 
 // TODO unify option parser. See TODO in SCHED_POLICY.
@@ -61,31 +36,20 @@ public:
   /// Get Executor
   rclcpp::executor::Executor::SharedPtr get_executor();
 
-  /// Get main thread policy
-  void get_main_thread_policy(size_t &priority, int &policy) {
-    get_sched(main_sched, priority, policy);
-  }
-
-  /// Get child thread policy
-  void get_child_thread_policy(size_t &priority, int &policy) {
-    get_sched(child_sched, priority, policy);
-  }
-
-  // scheduler
-  int sched_rrts;  // 0: false, 1: true
-  int sched_rrrr;  // 0: false, 1: true
-  SCHED_POLICY main_sched;
-  SCHED_POLICY child_sched;
-
-  size_t sched_priority;
-  int sched_policy;
-
   // run type
   RunType run_type;
 
+  // scheduler
+  int real_time_policy_;
+
+  ThreadOptions main_thread_;
+  ThreadOptions sig_handler_thread_;
+  ThreadOptions dds_thread_;
+  ThreadOptions ping_thread_;
+  ThreadOptions pong_thread_;
+
   // executor
   int use_static_executor;
-
   int use_loaning_;
 
   // prefault
@@ -113,10 +77,6 @@ public:
 
 private:
   void init_report_option(int bin, int round_ns, int num_skip);
-  // convert SCHED_POLICY to size_t and int.
-  void get_sched(SCHED_POLICY sp, size_t &priority, int &policy);
-  /// schedule option parser
-  SCHED_POLICY get_schedule_policy(const std::string &opt);
   RunType parse_run_type(const std::string &type);
 };
 

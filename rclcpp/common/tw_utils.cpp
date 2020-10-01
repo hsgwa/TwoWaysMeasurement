@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <numeric>
 
-#include <rttest/rttest.h>
 
 #include "tw_utils.hpp"
 
@@ -167,17 +166,3 @@ int lock_and_prefault_dynamic(size_t prefault_dynamic_size)
   return 0;
 }
 
-void set_sched_priority(const std::string &thread_name,
-                        size_t priority,
-                        int policy)
-{
-  if (rttest_set_sched_priority(priority,
-                                policy) != 0) {
-    std::cout << "Couldn't ";
-  }
-
-  std::cout << "set scheduling priority(" << priority << ")"
-            << " and policy(" << policy << ")"
-            << " to " << thread_name
-            << std::endl;
-}

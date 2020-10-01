@@ -44,6 +44,7 @@ set(TW_COMMON
   ../common/tw_utils.cpp
   ../common/two_ways_node.cpp
   ../common/tw_node_options.cpp
+  ../common/thread_options.cpp
   ../common/two_ways_service_node.cpp
   )
 

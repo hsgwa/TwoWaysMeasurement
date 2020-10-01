@@ -1,8 +1,8 @@
-#include <unistd.h>
-#include <getopt.h>
-
-#include <rclcpp/strategies/allocator_memory_strategy.hpp>
 #include "tw_node_options.hpp"
+#include <getopt.h>
+#include <sched.h>
+#include <unistd.h>
+#include <iostream>
 
 #define TRUE 1
 #define FALSE 0
@@ -23,17 +23,23 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
   // prevent permutation of argv
   const std::string optstring = "-";
   const struct option longopts[] = {
-      {"sched-rrts", no_argument, &sched_rrts, TRUE},
-      {"sched-rrrr", no_argument, &sched_rrrr, TRUE},
       {"ipm", no_argument, &use_intra_process_comms, TRUE},
       {"loan", no_argument, &use_loaning_, TRUE},
+      {"static-executor", no_argument, &use_static_executor, TRUE},
       {"round-ns", required_argument, 0, 'i'},
       {"num-skip", required_argument, 0, 'r'},
-      {"static-executor", no_argument, &use_static_executor, TRUE},
-      {"main-sched", required_argument, 0, 'm'},
-      {"child-sched", required_argument, 0, 'c'},
       {"run-type", required_argument, 0, 't'},
-      {"default-memory-strategy", no_argument, 0, 's'},
+      {"main-core", required_argument, 0, 'n'},
+      {"dds-core", required_argument, 0, 'm'},
+      {"ping-core", required_argument, 0, 'o'},
+      {"pong-core", required_argument, 0, 'p'},
+      {"main-priority", required_argument, 0, 'q'},
+      {"dds-priority", required_argument, 0, 's'},
+      {"ping-priority", required_argument, 0, 'u'},
+      {"pong-priority", required_argument, 0, 'v'},
+      {"sig-handler-core", required_argument, 0, 'w'},
+      {"sig-handler-priority", required_argument, 0, 'x'},
+      {"ros-args", required_argument, 0, 'z'},
       {0, 0, 0, 0},
   };
 
@@ -43,37 +49,91 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
   int num_skip = REPORT_NUM_SKIP_DEFAULT;
   bool needs_reinit = false;
   while ((c=getopt_long(argc, argv, optstring.c_str(), longopts, &longindex)) != -1) {
-    switch(c)
-    {
-      case('i'):
-        tmp = std::stoi(optarg);
-        if(tmp > 0) {
-          round_ns = tmp;
-          needs_reinit = true;
-        }
-        break;
-      case('r'):
-        tmp = std::stoi(optarg);
-        if(tmp > 0) {
-          num_skip = tmp;
-          needs_reinit = true;
-        }
-        break;
-      case('m'): {
-        main_sched = get_schedule_policy(std::string(optarg));
-        break;
+    std::string arg_str = argv[optind-2];
+    if ( c == 'z' ) { // ros-args
+      break;
+    }
+
+    switch (c) {
+    case ('i'):  // round-ns
+      tmp = std::stoi(optarg);
+      if (tmp > 0) {
+        round_ns = tmp;
+        needs_reinit = true;
       }
-      case('c'): {
-        child_sched = get_schedule_policy(std::string(optarg));
-        break;
+      break;
+    case ('r'): // num-skip
+      tmp = std::stoi(optarg);
+      if (tmp > 0) {
+        num_skip = tmp;
+        needs_reinit = true;
       }
-      case('t'): {
-        run_type = parse_run_type(std::string(optarg));
-        break;
+      break;
+    case ('t'): { // run-type
+      run_type = parse_run_type(std::string(optarg));
+      break;
+    }
+    case ('n'): { // main-core
+      main_thread_.affinity_ = std::stoi(optarg);
+      break;
+    }
+    case ('m'): { // dds-core
+      dds_thread_.affinity_ = std::stoi(optarg);
+      break;
+    }
+    case ('o'): { // ping-core
+      if (run_type != T2N2) {
+        std::cerr << "warn: unused option " << arg_str << std::endl;
       }
-      default:
-        std::cerr << "unknown option " << c << std::endl;
-        break;
+      ping_thread_.affinity_ = std::stoi(optarg);
+      break;
+    }
+    case ('p'): { // pong-core
+      if (run_type != T2N2) {
+        std::cerr << "warn: unused option " << arg_str << std::endl;
+      }
+      pong_thread_.affinity_ = std::stoi(optarg);
+      break;
+    }
+    case ('q'): { // main-priority
+      main_thread_.priority_ = std::stoi(optarg);
+      main_thread_.policy_ = real_time_policy_;
+      break;
+    }
+    case ('s'): { // dds-priority
+      dds_thread_.priority_ = std::stoi(optarg);
+      dds_thread_.policy_ = real_time_policy_;
+      break;
+    }
+    case ('u'): { // ping-priority
+      if (run_type != T2N2) {
+        std::cerr << "warn: unused option " << arg_str << std::endl;
+      }
+      ping_thread_.priority_ = std::stoi(optarg);
+      ping_thread_.policy_ = real_time_policy_;
+      break;
+    }
+    case ('v'): { // pong-priority
+      if (run_type != T2N2) {
+        std::cerr << "warn: unused option " << arg_str << std::endl;
+      }
+      pong_thread_.priority_ = std::stoi(optarg);
+      pong_thread_.policy_ = real_time_policy_;
+      break;
+    }
+    case ('w'): { // sig-handler-core
+      sig_handler_thread_.affinity_ = std::stoi(optarg);
+      break;
+    }
+    case ('x'): { // sig-handler-priority
+      sig_handler_thread_.priority_ = std::stoi(optarg);
+      sig_handler_thread_.policy_ = real_time_policy_;
+
+      break;
+    }
+    default:
+      std::cerr << "unknown option " << arg_str << std::endl;
+      break;
     }
   }
 
@@ -87,39 +147,27 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
   optopt = _optopt;
 }
 
-TwoWaysNodeOptions::TwoWaysNodeOptions():
-    sched_rrts(0),
-    sched_rrrr(0),
-    main_sched(SCHED_POLICY::TS),
-    child_sched(SCHED_POLICY::TS),
-    sched_priority(98),
-    sched_policy(SCHED_RR),
-    run_type(E1N1),
-    use_static_executor(FALSE),
-    prefault_dynamic_size(209715200UL),  // 200MB
-    node_name("node"),
-    node_name_pub("node_pub"),
-    node_name_sub("node_sub"),
-    namespace_("ns"),
-    topic_name("ping"),
-    topic_name_pong("pong"),
-    service_name("ping"),
-    qos(rclcpp::QoS(1).best_effort()),
-    period_ns(10 * 1000 * 1000),
-    num_loops_(10000),
-    use_loaning_(false),
-    use_intra_process_comms(FALSE)
-{
+TwoWaysNodeOptions::TwoWaysNodeOptions()
+    : run_type(E1N1), real_time_policy_(SCHED_RR), main_thread_("main"),
+      sig_handler_thread_("signal handler"),
+      dds_thread_("dds"),
+      ping_thread_("ping"),
+      pong_thread_("pong"),
+      use_static_executor(FALSE),
+      use_loaning_(false), prefault_dynamic_size(209715200UL), // 200MB
+      node_name("node"), node_name_pub("node_pub"), node_name_sub("node_sub"),
+      namespace_("ns"), topic_name("ping"), topic_name_pong("pong"),
+      service_name("ping"), qos(rclcpp::QoS(1).best_effort()),
+      period_ns(10 * 1000 * 1000), num_loops_(10000),
+      use_intra_process_comms(FALSE) {
   init_report_option(REPORT_BIN_DEFAULT, REPORT_ROUND_NS_DEFAULT, REPORT_NUM_SKIP_DEFAULT);
 }
 
 void TwoWaysNodeOptions::set_node_options(rclcpp::NodeOptions & node_options) const
 {
   std::cout << "use_intra_process_comms = " << (use_intra_process_comms == TRUE ? "true" : "false") << std::endl;
+  std::cout << "use_loaning = " << (use_loaning_ == TRUE ? "true" : "false") << std::endl;
 
-  std::cout << "use_loaning = "
-            << (use_loaning_ == TRUE ? "true" : "false")
-            << std::endl;
   node_options.use_intra_process_comms(use_intra_process_comms == TRUE);
 }
 
@@ -134,47 +182,11 @@ rclcpp::executor::Executor::SharedPtr TwoWaysNodeOptions::get_executor() {
   return std::make_shared<rclcpp::executors::SingleThreadedExecutor>(args);
 }
 
-void TwoWaysNodeOptions::get_sched(SCHED_POLICY sp, size_t &priority, int &policy)
-{
-
-  switch(sp)
-  {
-    case(TS): {
-      priority = 0;
-      policy = SCHED_OTHER;
-      break;
-    }
-    case(RR98): {
-      priority = 98;
-      policy = SCHED_RR;
-      break;
-    }
-    case(RR97): {
-      priority = 97;
-      policy = SCHED_RR;
-      break;
-    }
-  }
-}
-
 void TwoWaysNodeOptions::init_report_option(int bin, int round_ns, int num_skip)
 {
   common_report_option.bin = bin;
   common_report_option.round_ns = round_ns;
   common_report_option.num_skip = num_skip;
-}
-
-SCHED_POLICY TwoWaysNodeOptions::get_schedule_policy(const std::string &opt)
-{
-  if(opt == "RR98") {
-    return SCHED_POLICY::RR98;
-  } else if(opt == "RR97") {
-    return SCHED_POLICY::RR97;
-  } else if(opt == "TS") {
-    return SCHED_POLICY::TS;
-  } else {
-    throw std::invalid_argument("unknown policy: use RR98, RR97, TS");
-  }
 }
 
 RunType TwoWaysNodeOptions::parse_run_type(const std::string &type)
@@ -192,6 +204,6 @@ RunType TwoWaysNodeOptions::parse_run_type(const std::string &type)
   } else {
     // TODO: add 2t2n to comment
     // TODO: mod thread name to 1e1n etc.
-    throw std::invalid_argument("unknown run-type: 1e1n, 1e2n, 2e_ping, 2e_pong");
+    throw std::invalid_argument("unknown run-type: 1e1n, 1e2n, 2e_ping, 2e_pong, 2t2n");
   }
 }

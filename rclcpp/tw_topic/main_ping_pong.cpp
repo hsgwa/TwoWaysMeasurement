@@ -225,49 +225,39 @@ class RusageCounter {
   struct rusage end_;
 };
 
-void set_affinity(const pthread_t &thread, int core_num) {
-  cpu_set_t cpu_set;
-
-  CPU_ZERO(&cpu_set);
-  CPU_SET(core_num, &cpu_set);
-
-  int result = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpu_set);
-  if (result != 0) {
-    std::cout << "failed to set affinity" << std::endl;
-  }
-}
 
 int main(int argc, char *argv[])
 {
   std::cout << "Press C-c to quit" << std::endl;
 
   TwoWaysNodeOptions tw_options(argc, argv);
+  tw_options.main_thread_.report();
+  tw_options.sig_handler_thread_.report();
+  tw_options.dds_thread_.report();
+  if (tw_options.run_type == T2N2 ) {
+    tw_options.ping_thread_.report();
+    tw_options.pong_thread_.report();
+  }
 
   if(lock_and_prefault_dynamic(tw_options.prefault_dynamic_size) < 0) {
     std::cerr << "lock_and_prefault_dynamic failed" << std::endl;
   }
 
-  // setup child process scheule
-  size_t priority = 0;
-  int policy = 0;
-  tw_options.get_child_thread_policy(priority, policy);
-  set_sched_priority("child", priority, policy);
-
-  set_affinity(pthread_self(), 1);
-
+  tw_options.sig_handler_thread_.setup(pthread_self());
   rclcpp::init(argc, argv);
 
   RusageCounter rusageCounter;
 
   if(tw_options.run_type != T2N2) {
-    auto exec = tw_options.get_executor();
+    // setup dds process scheule
 
+    tw_options.dds_thread_.setup(pthread_self());
+    auto exec = tw_options.get_executor();
     auto runner = make_runner(tw_options.run_type, exec);
     runner->setup(tw_options);
 
-    // setup child process scheule
-    tw_options.get_main_thread_policy(priority, policy);
-    set_sched_priority("main", priority, policy);
+    // setup main process scheule
+    tw_options.main_thread_.setup(pthread_self());
 
     rusageCounter.start();
     exec->spin();
@@ -278,6 +268,8 @@ int main(int argc, char *argv[])
     rusageCounter.report();
 
   } else {
+    tw_options.dds_thread_.setup(pthread_self());
+
     tw_options.run_type = E2_PING;
     auto exec_ping = tw_options.get_executor();
     auto runner_ping = make_runner(tw_options.run_type, exec_ping);
@@ -288,14 +280,15 @@ int main(int argc, char *argv[])
     auto runner_pong = make_runner(tw_options.run_type, exec_pong);
     runner_pong->setup(tw_options);
 
-    // setup child process scheule
-    tw_options.get_main_thread_policy(priority, policy);
-    set_sched_priority("main", priority, policy);
+    tw_options.main_thread_.setup(pthread_self());
 
     std::thread th_ping(&rclcpp::Executor::spin, exec_ping);
     std::thread th_pong(&rclcpp::Executor::spin, exec_pong);
-    set_affinity(th_ping.native_handle(), 2);
-    set_affinity(th_pong.native_handle(), 2);
+    // setup executor thread's schedule>
+
+    tw_options.ping_thread_.setup(th_ping.native_handle());
+    tw_options.pong_thread_.setup(th_pong.native_handle());
+
     rusageCounter.start();
 
     th_ping.join();

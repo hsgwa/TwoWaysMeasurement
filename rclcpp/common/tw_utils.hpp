@@ -3,6 +3,7 @@
 
 #include <time.h>
 #include <array>
+#include <sched.h>
 
 /**
  * Create jitter report such as histogram, max_value.
@@ -89,6 +90,9 @@ int lock_and_prefault_dynamic(size_t prefault_dynamic_size);
 void set_sched_priority(const std::string &thread_name,
                         size_t priority,
                         int policy);
-
+/// sched_setaffinity wrapper
+void set_affinity(const std::string &thread_name,
+                  const pthread_t &thread,
+                  int core_num);
 
 #endif  // TW_UTILS_HPP_
