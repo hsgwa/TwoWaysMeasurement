@@ -27,11 +27,10 @@ protected:
   rclcpp::executor::Executor::SharedPtr exec_;
 };
 
-class Runner_1e1n : public Runner
-{
+class Runner_1e1n : public Runner {
 public:
-  Runner_1e1n(rclcpp::executor::Executor::SharedPtr e):
-      Runner(e) {
+  Runner_1e1n(rclcpp::executor::Executor::SharedPtr e)
+      : Runner(e) {
     std::cout << "runner = 1e1n" << std::endl;
   }
 
@@ -65,12 +64,11 @@ private:
   std::shared_ptr<TwoWaysNode> n_;
 };
 
-class Runner_1e2n : public Runner
-{
+class Runner_1e2n : public Runner {
 public:
-  Runner_1e2n(rclcpp::executor::Executor::SharedPtr e):
-      Runner(e) {
-      std::cout << "runner = 1e2n" << std::endl;
+  Runner_1e2n(rclcpp::executor::Executor::SharedPtr e)
+      : Runner(e) {
+    std::cout << "runner = 1e2n" << std::endl;
   }
 
   void setup(const TwoWaysNodeOptions &tw_options) override {
@@ -107,12 +105,11 @@ private:
   std::shared_ptr<TwoWaysNode> npub_, nsub_;
 };
 
-class Runner_2e_ping : public Runner
-{
+class Runner_2e_ping : public Runner {
 public:
-  Runner_2e_ping(rclcpp::executor::Executor::SharedPtr e):
-      Runner(e) {
-      std::cout << "runner = 1e2n_ping" << std::endl;
+  Runner_2e_ping(rclcpp::executor::Executor::SharedPtr e)
+      : Runner(e) {
+    std::cout << "runner = 1e2n_ping" << std::endl;
   }
 
   void setup(const TwoWaysNodeOptions &tw_options) override {
@@ -172,9 +169,8 @@ private:
   std::shared_ptr<TwoWaysNode> nsub_;
 };
 
-std::unique_ptr<Runner>
-make_runner(RunType type, rclcpp::executor::Executor::SharedPtr e)
-{
+std::unique_ptr<Runner> make_runner(RunType type,
+                                    rclcpp::executor::Executor::SharedPtr e) {
   std::unique_ptr<Runner> p(nullptr);
   switch(type) {
     case(E1N1): {

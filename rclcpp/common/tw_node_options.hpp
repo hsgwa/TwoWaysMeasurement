@@ -3,8 +3,8 @@
 
 #include <sched.h>
 
-#include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 struct JitterReportOptions
 {
@@ -106,10 +106,6 @@ public:
   /////// test conditions
   // number of loops
   const int num_loops_;
-  // Options for rclcpp::Executor
-  const bool use_tlsf_allocator;
-  // Options for rclcpp::Subscription
-  bool use_message_pool_memory_strategy;
   // Options for rclcpp::Node
   int use_intra_process_comms; // 0: false, 1: true
 

@@ -2,13 +2,7 @@
 #include <getopt.h>
 
 #include <rclcpp/strategies/allocator_memory_strategy.hpp>
-#include <tlsf_cpp/tlsf.hpp>
 #include "tw_node_options.hpp"
-
-using rclcpp::memory_strategies::allocator_memory_strategy::AllocatorMemoryStrategy;
-
-template<typename T = void>
-using TLSFAllocator = tlsf_heap_allocator<T>;
 
 #define TRUE 1
 #define FALSE 0
@@ -76,11 +70,8 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
         run_type = parse_run_type(std::string(optarg));
         break;
       }
-      case('s'): {
-        use_message_pool_memory_strategy = false;
-        break;
-      }
       default:
+        std::cerr << "unknown option " << c << std::endl;
         break;
     }
   }
@@ -115,8 +106,6 @@ TwoWaysNodeOptions::TwoWaysNodeOptions():
     qos(rclcpp::QoS(1).best_effort()),
     period_ns(10 * 1000 * 1000),
     num_loops_(10000),
-    use_tlsf_allocator(true),
-    use_message_pool_memory_strategy(true),
     use_intra_process_comms(FALSE)
 {
   init_report_option(REPORT_BIN_DEFAULT, REPORT_ROUND_NS_DEFAULT, REPORT_NUM_SKIP_DEFAULT);
@@ -128,15 +117,8 @@ void TwoWaysNodeOptions::set_node_options(rclcpp::NodeOptions & node_options) co
   node_options.use_intra_process_comms(use_intra_process_comms == TRUE);
 }
 
-rclcpp::executor::Executor::SharedPtr TwoWaysNodeOptions::get_executor()
-{
+rclcpp::executor::Executor::SharedPtr TwoWaysNodeOptions::get_executor() {
   rclcpp::ExecutorOptions args;
-
-  if (use_tlsf_allocator) {
-    rclcpp::memory_strategy::MemoryStrategy::SharedPtr memory_strategy =
-        std::make_shared<AllocatorMemoryStrategy<TLSFAllocator<void>>>();
-    args.memory_strategy = memory_strategy;
-  }
 
   if (use_static_executor) {
     std::cout << "use StaticSingleThreadedExecutor" << std::endl;

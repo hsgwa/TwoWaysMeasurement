@@ -1,8 +1,9 @@
+#include "two_ways_node.hpp"
 #include <rclcpp/strategies/message_pool_memory_strategy.hpp>
 #include <rttest/utils.hpp>
-#include "two_ways_node.hpp"
 
 using rclcpp::strategies::message_pool_memory_strategy::MessagePoolMemoryStrategy;
+
 
 const std::string PERIOD_NS = "period_ns";
 const std::string NUM_LOOPS = "num_loops";
@@ -59,8 +60,7 @@ void TwoWaysNode::setup_ping_publisher()
   std::cout << NUM_LOOPS   << ": " << num_loops << std::endl;
   std::cout << DEBUG_PRINT << ": " << (debug_print ? "true" : "false") << std::endl;
 
-  // pub
-  this->ping_pub_ = this->create_publisher<twmsgs::msg::Data>(topic_name, qos);
+  ping_pub_ = create_publisher<twmsgs::msg::Data>(topic_name, qos);
 
   auto callback_timer =
       [this, period_ns, num_loops, debug_print]() -> void
@@ -70,8 +70,7 @@ void TwoWaysNode::setup_ping_publisher()
 
         // calc wakeup jitter
         int64_t wake_latency = 0;
-        if (rcl_timer_get_time_since_last_call(
-                &(*this->ping_timer_->get_timer_handle()), &wake_latency) != RCL_RET_OK) {
+        if (rcl_timer_get_time_since_last_call(&(*this->ping_timer_->get_timer_handle()), &wake_latency) != RCL_RET_OK) {
           return;
         }
         ping_wakeup_report_.add(wake_latency);
@@ -87,15 +86,15 @@ void TwoWaysNode::setup_ping_publisher()
         add_timespecs(&epoch_ts_, &period_ts_, &expect_ts_);
         ping_pub_count_++;
         last_wake_ts_ = time_wake_ts;
+        auto msg = std::make_unique<twmsgs::msg::Data>(); // TODO use memory pool
 
-        // pub
-        msg_.data = ping_pub_count_;
+        msg->data = ping_pub_count_;
         // define original image
-        for(size_t i=0; i< msg_.image.size(); i++) {
-          msg_.image[i] = 0;
+        for(size_t i=0; i< msg->image.size(); i++) {
+          msg->image[i] = 0;
         }
-        msg_.time_sent_ns = get_now_int64();
-        ping_pub_->publish(msg_);
+        msg->time_sent_ns = get_now_int64();
+        this->ping_pub_->publish(std::move(msg));
 
         if(debug_print) {
           struct timespec time_print;
@@ -142,13 +141,12 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
 
   // subscriber callback
   auto callback_sub =
-      [this, debug_print](const twmsgs::msg::Data::SharedPtr msg) -> void
-      {
-        struct timespec now_ts;
-        getnow(&now_ts);
-        auto now_ns = _timespec_to_uint64(&now_ts);
-        if (ping_sub_report_.add(now_ns - msg->time_sent_ns)) {
-          ping_argmax_ = msg->data;
+  [this, debug_print](twmsgs::msg::Data::UniquePtr msg) -> void
+  { struct timespec now_ts;
+  getnow(&now_ts);
+  auto now_ns = _timespec_to_uint64(&now_ts);
+  if (ping_sub_report_.add(now_ns - msg->time_sent_ns)) {
+    ping_argmax_ = msg->data;
         }
 
         if (msg->data == ping_sub_count_ + 1) {
@@ -157,7 +155,7 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
           ping_drop += 1;
           ping_drop_gap_ += msg->data - (ping_sub_count_ + 1);
           ping_sub_count_ = msg->data;
-	  ping_argdrop_ = msg->data;
+          ping_argdrop_ = msg->data;
         } else {  // msg->data < ping_sub_count_ + 1, late delivery
           ping_late += 1;
         }
@@ -174,15 +172,13 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
           return;
         }
 
-        auto pong = twmsgs::msg::Data();
-        pong.time_sent_pong_ns = now_ns;
-        pong.data = msg->data;
+        msg->time_sent_pong_ns = now_ns;
         // pos-neg inversion
-        for(size_t i=0; i< msg_.image.size(); i++) {
-          pong.image[i] = 255 - msg->image[i];
-        }
-        pong.time_sent_ns = get_now_int64();
-        pong_pub_->publish(pong);
+        // for(size_t i=0; i< msg_.image.size(); i++) {
+        //   pong.image[i] = 255 - msg->image[i];
+        // }
+        msg->time_sent_ns = get_now_int64();
+        pong_pub_->publish(std::move(msg));
         pong_pub_count_++;
 
         struct timespec time_exit;
@@ -192,26 +188,9 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
       };
 
   rclcpp::SubscriptionOptions subscription_options;
-  if (tw_options_.use_message_pool_memory_strategy) {
-    std::cout << "use MessagePoolMemoryStrategy" << std::endl;
-    auto data_msg_strategy =
-        std::make_shared<MessagePoolMemoryStrategy<twmsgs::msg::Data, 1>>();
-    ping_sub_ =
-        create_subscription<twmsgs::msg::Data>(
-            topic_name,
-            qos,
-            callback_sub,
-            subscription_options,
-            data_msg_strategy);
-  } else {
-    std::cout << "don't use MessagePoolMemoryStrategy" << std::endl;
-    ping_sub_ =
-        create_subscription<twmsgs::msg::Data>(
-            topic_name,
-            qos,
-            callback_sub,
-            subscription_options);
-  }
+  std::cout << "don't use TLSF Allocator for subscription" << std::endl;
+  ping_sub_ = create_subscription<twmsgs::msg::Data>(
+      topic_name, qos, callback_sub, subscription_options);
 }
 
 void TwoWaysNode::setup_pong_subscriber()
@@ -219,7 +198,7 @@ void TwoWaysNode::setup_pong_subscriber()
   auto topic_name_pong = tw_options_.topic_name_pong;
   auto qos = tw_options_.qos;
   auto callback_pong_sub =
-      [this](const twmsgs::msg::Data::SharedPtr msg) -> void
+      [this](const twmsgs::msg::Data::UniquePtr msg) -> void
       {
         struct timespec now;
         getnow(&now);
@@ -245,11 +224,10 @@ void TwoWaysNode::setup_pong_subscriber()
         subtract_timespecs(&time_exit, &now, &time_exit);
         pong_callback_process_time_report_.add(_timespec_to_uint64(&time_exit));
       };
+
   rclcpp::SubscriptionOptions subscription_options;
-  pong_sub_ = create_subscription<twmsgs::msg::Data>(topic_name_pong,
-                                                     qos,
-                                                     callback_pong_sub,
-                                                     subscription_options);
+  pong_sub_ = create_subscription<twmsgs::msg::Data>(
+      topic_name_pong, qos, callback_pong_sub, subscription_options);
 }
 
 int64_t TwoWaysNode::get_now_int64()
