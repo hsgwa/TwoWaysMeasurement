@@ -9,10 +9,7 @@
 
 #include "../common/tw_utils.hpp"
 #include "../common/two_ways_node.hpp"
-#include "osrf_testing_tools_cpp/memory_tools/memory_tools.hpp"
-#include "osrf_testing_tools_cpp/scope_exit.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include <dlfcn.h>
 
 const char * node_name = "one_node_ping_pong";
 
@@ -264,27 +261,6 @@ int main(int argc, char *argv[])
 
   rclcpp::init(argc, argv);
 
-
-  osrf_testing_tools_cpp::memory_tools::initialize();
-  OSRF_TESTING_TOOLS_CPP_SCOPE_EXIT({
-    osrf_testing_tools_cpp::memory_tools::uninitialize();
-  });
-
-  osrf_testing_tools_cpp::memory_tools::enable_monitoring();
-  // TODO: add assert
-  // ASSERT_TRUE(osrf_testing_tools_cpp::memory_tools::is_working());
-
-  auto on_unexpected_memory =
-    [](osrf_testing_tools_cpp::memory_tools::MemoryToolsService & service) {
-      // ADD_FAILURE() << "unexpected malloc";
-      service.print_backtrace();
-    };
-
-  osrf_testing_tools_cpp::memory_tools::on_unexpected_calloc(on_unexpected_memory);
-  osrf_testing_tools_cpp::memory_tools::on_unexpected_free(on_unexpected_memory);
-  osrf_testing_tools_cpp::memory_tools::on_unexpected_malloc(on_unexpected_memory);
-  osrf_testing_tools_cpp::memory_tools::on_unexpected_realloc(on_unexpected_memory);
-
   RusageCounter rusageCounter;
 
   if(tw_options.run_type != T2N2) {
@@ -298,9 +274,7 @@ int main(int argc, char *argv[])
     set_sched_priority("main", priority, policy);
 
     rusageCounter.start();
-    osrf_testing_tools_cpp::memory_tools::expect_no_malloc_begin();
     exec->spin();
-    osrf_testing_tools_cpp::memory_tools:: expect_no_malloc_end();
     rusageCounter.end();
 
     runner->cleanup();
@@ -328,10 +302,8 @@ int main(int argc, char *argv[])
     set_affinity(th_pong.native_handle(), 2);
     rusageCounter.start();
 
-    osrf_testing_tools_cpp::memory_tools::expect_no_malloc_begin();
     th_ping.join();
     th_pong.join();
-    osrf_testing_tools_cpp::memory_tools::expect_no_malloc_end();
 
     rusageCounter.end();
 
