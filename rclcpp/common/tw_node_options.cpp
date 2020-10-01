@@ -23,17 +23,18 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
   // prevent permutation of argv
   const std::string optstring = "-";
   const struct option longopts[] = {
-    {"sched-rrts",      no_argument,            &sched_rrts,                    TRUE},
-    {"sched-rrrr",      no_argument,            &sched_rrrr,                    TRUE},
-    {"ipm",             no_argument,            &use_intra_process_comms,       TRUE},
-    {"round-ns",        required_argument,      0,                              'i'},
-    {"num-skip",        required_argument,      0,                              'r'},
-    {"static-executor", no_argument,            &use_static_executor,           TRUE},
-    {"main-sched",      required_argument,      0,                              'm'},
-    {"child-sched",     required_argument,      0,                              'c'},
-    {"run-type",        required_argument,      0,                              't'},
-    {"default-memory-strategy", no_argument,    0,                              's'},
-    {0,                 0,                      0,                               0},
+      {"sched-rrts", no_argument, &sched_rrts, TRUE},
+      {"sched-rrrr", no_argument, &sched_rrrr, TRUE},
+      {"ipm", no_argument, &use_intra_process_comms, TRUE},
+      {"loan", no_argument, &use_loaning_, TRUE},
+      {"round-ns", required_argument, 0, 'i'},
+      {"num-skip", required_argument, 0, 'r'},
+      {"static-executor", no_argument, &use_static_executor, TRUE},
+      {"main-sched", required_argument, 0, 'm'},
+      {"child-sched", required_argument, 0, 'c'},
+      {"run-type", required_argument, 0, 't'},
+      {"default-memory-strategy", no_argument, 0, 's'},
+      {0, 0, 0, 0},
   };
 
   int longindex = 0;
@@ -106,6 +107,7 @@ TwoWaysNodeOptions::TwoWaysNodeOptions():
     qos(rclcpp::QoS(1).best_effort()),
     period_ns(10 * 1000 * 1000),
     num_loops_(10000),
+    use_loaning_(false),
     use_intra_process_comms(FALSE)
 {
   init_report_option(REPORT_BIN_DEFAULT, REPORT_ROUND_NS_DEFAULT, REPORT_NUM_SKIP_DEFAULT);
@@ -114,6 +116,10 @@ TwoWaysNodeOptions::TwoWaysNodeOptions():
 void TwoWaysNodeOptions::set_node_options(rclcpp::NodeOptions & node_options) const
 {
   std::cout << "use_intra_process_comms = " << (use_intra_process_comms == TRUE ? "true" : "false") << std::endl;
+
+  std::cout << "use_loaning = "
+            << (use_loaning_ == TRUE ? "true" : "false")
+            << std::endl;
   node_options.use_intra_process_comms(use_intra_process_comms == TRUE);
 }
 

@@ -86,15 +86,23 @@ void TwoWaysNode::setup_ping_publisher()
         add_timespecs(&epoch_ts_, &period_ts_, &expect_ts_);
         ping_pub_count_++;
         last_wake_ts_ = time_wake_ts;
-        auto msg = std::make_unique<twmsgs::msg::Data>(); // TODO use memory pool
 
-        msg->data = ping_pub_count_;
-        // define original image
-        for(size_t i=0; i< msg->image.size(); i++) {
-          msg->image[i] = 0;
+        if (this->tw_options_.use_loaning_) {
+          auto msg = ping_pub_->borrow_loaned_message();
+          msg.get().data = ping_sub_count_;
+          msg.get().time_sent_ns = get_now_int64();
+          this->ping_pub_->publish(std::move(msg));
+        } else {
+          auto msg = std::make_unique<twmsgs::msg::Data>(); // TODO use memory pool
+
+          msg->data = ping_pub_count_;
+          // define original image
+          for (size_t i = 0; i < msg->image.size(); i++) {
+            msg->image[i] = 0;
+          }
+          msg->time_sent_ns = get_now_int64();
+          this->ping_pub_->publish(std::move(msg));
         }
-        msg->time_sent_ns = get_now_int64();
-        this->ping_pub_->publish(std::move(msg));
 
         if(debug_print) {
           struct timespec time_print;

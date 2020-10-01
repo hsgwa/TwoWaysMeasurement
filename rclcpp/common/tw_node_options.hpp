@@ -86,6 +86,8 @@ public:
   // executor
   int use_static_executor;
 
+  int use_loaning_;
+
   // prefault
   size_t prefault_dynamic_size;
 
