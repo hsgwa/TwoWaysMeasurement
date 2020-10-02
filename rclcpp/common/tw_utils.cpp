@@ -39,6 +39,11 @@ bool JitterReport::add(int64_t ns)
 
 void JitterReport::print(const std::string & prefix)
 {
+  if (cnt_ == 0) {
+    std::cerr << "No data added! " << std::endl;
+    return;
+  }
+
   std::cout << prefix << std::endl;
   std::cout << "  max: " << max_ns_ << "[ns]" << std::endl;
   std::cout << "  avg: " << accum_ / cnt_ << "[ns]" << std::endl;
