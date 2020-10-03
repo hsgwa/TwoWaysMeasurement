@@ -89,7 +89,7 @@ void TwoWaysNode::setup_ping_publisher()
 
         if (this->tw_options_.use_loaning_) {
           auto msg = ping_pub_->borrow_loaned_message();
-          msg.get().data = ping_sub_count_;
+          msg.get().data = ping_pub_count_;
           msg.get().time_sent_ns = get_now_int64();
           this->ping_pub_->publish(std::move(msg));
         } else {
@@ -180,12 +180,11 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
           return;
         }
 
-        msg->time_sent_pong_ns = now_ns;
         // pos-neg inversion
         // for(size_t i=0; i< msg_.image.size(); i++) {
         //   pong.image[i] = 255 - msg->image[i];
         // }
-        msg->time_sent_ns = get_now_int64();
+        msg->time_sent_pong_ns = get_now_int64();
         pong_pub_->publish(std::move(msg));
         pong_pub_count_++;
 
