@@ -40,7 +40,7 @@ bool JitterReport::add(int64_t ns)
 void JitterReport::print(const std::string & prefix)
 {
   if (cnt_ == 0) {
-    std::cerr << "No data added! " << std::endl;
+    std::cerr << prefix << "has NO DATA! " << std::endl;
     return;
   }
 
