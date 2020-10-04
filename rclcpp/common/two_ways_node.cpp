@@ -89,16 +89,17 @@ void TwoWaysNode::setup_ping_publisher()
 
         if (this->tw_options_.use_loaning_) {
           auto msg = ping_pub_->borrow_loaned_message();
+          if (this->tw_options_.array_size_ > 0) {
+            msg.get().image.resize(this->tw_options_.array_size_); // TODO move to initial phaze
+          }
           msg.get().data = ping_pub_count_;
           msg.get().time_sent_ns = get_now_int64();
           this->ping_pub_->publish(std::move(msg));
         } else {
           auto msg = std::make_unique<twmsgs::msg::Data>(); // TODO use memory pool
-
           msg->data = ping_pub_count_;
-          // define original image
-          for (size_t i = 0; i < msg->image.size(); i++) {
-            msg->image[i] = 0;
+          if (this->tw_options_.array_size_ > 0) {
+            msg->image.resize(this->tw_options_.array_size_); // TODO move to initial phaze
           }
           msg->time_sent_ns = get_now_int64();
           this->ping_pub_->publish(std::move(msg));
@@ -220,7 +221,7 @@ void TwoWaysNode::setup_pong_subscriber()
           pong_drop += 1;
           pong_drop_gap_ += msg->data - (pong_sub_count_ + 1);
           pong_sub_count_ = msg->data;
-	  pong_argdrop_ = msg->data;
+          pong_argdrop_ = msg->data;
         } else {  // msg->data < pong_sub_count_ + 1, late delivery
           pong_late += 1;
         }

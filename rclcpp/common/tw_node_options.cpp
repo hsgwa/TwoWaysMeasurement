@@ -39,6 +39,7 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
       {"pong-priority", required_argument, 0, 'v'},
       {"sig-handler-core", required_argument, 0, 'w'},
       {"sig-handler-priority", required_argument, 0, 'x'},
+      {"array-size", required_argument, 0, 'y'},
       {"ros-args", required_argument, 0, 'z'},
       {0, 0, 0, 0},
   };
@@ -134,6 +135,10 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
 
       break;
     }
+    case ('y'): { // array-size
+      array_size_ = std::stoi(optarg);
+      break;
+    }
     default:
       std::cerr << "unknown option " << arg_str << std::endl;
       break;
@@ -162,6 +167,7 @@ TwoWaysNodeOptions::TwoWaysNodeOptions()
       namespace_("ns"), topic_name("ping"), topic_name_pong("pong"),
       service_name("ping"), qos(rclcpp::QoS(1).best_effort()),
       period_ns(10 * 1000 * 1000), num_loops_(10000),
+      array_size_(-1),
       use_intra_process_comms(FALSE) {
   init_report_option(REPORT_BIN_DEFAULT, REPORT_ROUND_NS_DEFAULT, REPORT_NUM_SKIP_DEFAULT);
 }

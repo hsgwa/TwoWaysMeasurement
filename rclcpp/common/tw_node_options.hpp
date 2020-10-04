@@ -72,6 +72,8 @@ public:
   /////// test conditions
   // number of loops
   const int num_loops_;
+
+  int array_size_;
   // Options for rclcpp::Node
   int use_intra_process_comms; // 0: false, 1: true
 
