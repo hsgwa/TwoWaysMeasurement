@@ -49,6 +49,9 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
   int num_skip = REPORT_NUM_SKIP_DEFAULT;
   bool needs_reinit = false;
   while ((c=getopt_long(argc, argv, optstring.c_str(), longopts, &longindex)) != -1) {
+    if (c==0){
+      continue;
+    }
     std::string arg_str = argv[optind-2];
     if ( c == 'z' ) { // ros-args
       break;
