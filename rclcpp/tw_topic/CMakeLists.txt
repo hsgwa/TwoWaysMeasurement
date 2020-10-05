@@ -25,6 +25,10 @@ find_package(tlsf_cpp)
 find_package(rttest)
 
 add_compile_options(-O0 -rdynamic)
+if(${USE_BOUNDED})
+	add_definitions(-DUSE_BOUNDED)
+endif()
+
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)

@@ -89,18 +89,18 @@ void TwoWaysNode::setup_ping_publisher()
 
         if (this->tw_options_.use_loaning_) {
           auto msg = ping_pub_->borrow_loaned_message();
-          if (this->tw_options_.array_size_ > 0) {
-            msg.get().image.resize(this->tw_options_.array_size_); // TODO move to initial phaze
-          }
           msg.get().data = ping_pub_count_;
           msg.get().time_sent_ns = get_now_int64();
           this->ping_pub_->publish(std::move(msg));
         } else {
           auto msg = std::make_unique<twmsgs::msg::Data>(); // TODO use memory pool
           msg->data = ping_pub_count_;
-          if (this->tw_options_.array_size_ > 0) {
-            msg->image.resize(this->tw_options_.array_size_); // TODO move to initial phaze
-          }
+
+#ifdef USE_BOUNDED
+      if (this->tw_options_.array_size_ > 0) { // TODO: uncomment if fixed size array
+        msg->image.resize(this->tw_options_.array_size_); // TODO move to initial phaze
+      }
+#endif
           msg->time_sent_ns = get_now_int64();
           this->ping_pub_->publish(std::move(msg));
         }
