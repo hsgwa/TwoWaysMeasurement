@@ -175,13 +175,12 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
         }
 
         auto pong = twmsgs::msg::Data();
-        pong.time_sent_pong_ns = now_ns;
         pong.data = msg->data;
         // pos-neg inversion
         for(size_t i=0; i< msg_.image.size(); i++) {
           pong.image[i] = 255 - msg->image[i];
         }
-        pong.time_sent_ns = get_now_int64();
+        pong.time_sent_pong_ns = get_now_int64();
         pong_pub_->publish(pong);
         pong_pub_count_++;
 
