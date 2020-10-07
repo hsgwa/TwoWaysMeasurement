@@ -41,6 +41,7 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
       {"sig-handler-priority", required_argument, 0, 'x'},
       {"array-size", required_argument, 0, 'y'},
       {"ros-args", required_argument, 0, 'z'},
+      {"bin-size", required_argument, 0, 'b'},
       {0, 0, 0, 0},
   };
 
@@ -48,6 +49,7 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
   int tmp = -1;
   int round_ns = REPORT_ROUND_NS_DEFAULT;
   int num_skip = REPORT_NUM_SKIP_DEFAULT;
+  int bin_size = REPORT_BIN_DEFAULT;
   bool needs_reinit = false;
   while ((c=getopt_long(argc, argv, optstring.c_str(), longopts, &longindex)) != -1) {
     if (c==0){
@@ -59,6 +61,12 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
     }
 
     switch (c) {
+    case ('b'): // bin-size
+      tmp = std::stoi(optarg);
+      if (tmp > 0) {
+        bin_size = tmp;
+      }
+      break;
     case ('i'):  // round-ns
       tmp = std::stoi(optarg);
       if (tmp > 0) {
@@ -147,7 +155,7 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
 
   if(needs_reinit) {
     std::cout << "num_skip: " << num_skip << std::endl;
-    init_report_option(REPORT_BIN_DEFAULT, round_ns, num_skip);
+    init_report_option(bin_size, round_ns, num_skip);
   }
 
   optind = _optind;
