@@ -16,6 +16,7 @@ TwoWaysNode::TwoWaysNode(
     const rclcpp::NodeOptions & options)
     : Node(name, namespace_, options),
       tw_options_(tw_options),
+      time_next_wake_(0),
       ping_pub_count_(0), ping_sub_count_(0),
       pong_pub_count_(0), pong_sub_count_(0),
       send_pong_(false),
@@ -68,12 +69,16 @@ void TwoWaysNode::setup_ping_publisher()
         struct timespec time_wake_ts;
         getnow(&time_wake_ts);
 
+        int64_t wakeup_;
         // calc wakeup jitter
-        int64_t wake_latency = 0;
-        if (rcl_timer_get_time_since_last_call(&(*this->ping_timer_->get_timer_handle()), &wake_latency) != RCL_RET_OK) {
+        if (rcl_timer_get_now(&(*this->ping_timer_->get_timer_handle()),
+                              &wakeup_) != RCL_RET_OK) {
           return;
         }
-        ping_wakeup_report_.add(wake_latency);
+
+        if (ping_pub_count_ > 0) { // ignore first wakeup because time_next_call_ is zero initialized.
+          ping_wakeup_report_.add(wakeup_ - time_next_wake_);
+        }
 
         // calc difference from last callback
         struct timespec diff_from_last_wakeup_ts;
@@ -120,6 +125,11 @@ void TwoWaysNode::setup_ping_publisher()
         getnow(&time_exit);
         subtract_timespecs(&time_exit, &time_wake_ts, &time_exit);
         timer_callback_process_time_report_.add(_timespec_to_uint64(&time_exit));
+
+        if (rcl_timer_get_time_next_call(&(*this->ping_timer_->get_timer_handle()), &time_next_wake_) !=
+            RCL_RET_OK) {
+          std::cerr << "failed to get next call time" << std::endl;
+        };
 
         if(ping_pub_count_ == num_loops) {
           std::raise(SIGINT);

@@ -69,6 +69,9 @@ protected:
   const TwoWaysNodeOptions & tw_options_;
 
 private:
+  // absolute time of timer wake up.
+  int64_t time_next_wake_;
+
   // number of ping publish
   int ping_pub_count_;
   // number of ping subscribe
@@ -107,6 +110,7 @@ private:
   uint64_t pong_argdrop_;
   // how many times pong late
   uint64_t pong_late;
+
 
   // wakeup jitter report
   JitterReportWithSkip ping_wakeup_report_;
