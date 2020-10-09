@@ -98,11 +98,11 @@ void TwoWaysNode::setup_ping_publisher()
           msg.get().time_sent_ns = get_now_int64();
           this->ping_pub_->publish(std::move(msg));
         } else {
-          auto msg = std::make_unique<twmsgs::msg::Data>(); // TODO use memory pool
+          auto msg = std::make_unique<twmsgs::msg::Data>();
           msg->data = ping_pub_count_;
 
 #ifdef USE_BOUNDED
-      if (this->tw_options_.array_size_ > 0) { // TODO: uncomment if fixed size array
+      if (this->tw_options_.array_size_ > 0) {
         msg->image.resize(this->tw_options_.array_size_); // TODO move to initial phaze
       }
 #endif
