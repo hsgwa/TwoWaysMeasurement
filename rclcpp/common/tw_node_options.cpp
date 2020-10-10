@@ -65,6 +65,7 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
       tmp = std::stoi(optarg);
       if (tmp > 0) {
         bin_size = tmp;
+        needs_reinit = true;
       }
       break;
     case ('i'):  // round-ns
