@@ -76,8 +76,9 @@ void TwoWaysNode::setup_ping_publisher()
           return;
         }
 
+        auto latency = wakeup_ - time_next_wake_;
         if (ping_pub_count_ > 0) { // ignore first wakeup because time_next_call_ is zero initialized.
-          ping_wakeup_report_.add(wakeup_ - time_next_wake_);
+          ping_wakeup_report_.add(latency);
         }
 
         // calc difference from last callback
@@ -117,7 +118,7 @@ void TwoWaysNode::setup_ping_publisher()
                     << "time_print.tv_nsec: " << time_print.tv_nsec << std::endl;
           std::cout << "sent ping id = " << ping_pub_count_
                     << " @" << _timespec_to_uint64(&time_print)
-                    << " waked up @ " << _timespec_to_uint64(&time_wake_ts)
+                    << " waked-up @ " << latency
                     << std::endl;
         }
 
