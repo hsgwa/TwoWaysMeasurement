@@ -5,6 +5,8 @@
 #include <array>
 #include <sched.h>
 
+#define TOPN_SIZE 10
+
 /**
  * Create jitter report such as histogram, max_value.
  *
@@ -19,6 +21,7 @@
  * max_value
  *   maximim_value
  */
+
 class JitterReport
 {
 public:
@@ -48,6 +51,8 @@ private:
   // accumurator & count to calculate average
   int64_t accum_;
   int64_t cnt_;
+  int64_t topn_ns_[TOPN_SIZE] = {0};
+  int64_t topn_idx_[TOPN_SIZE] = {0};
 };
 
 class JitterReportWithSkip

@@ -30,10 +30,27 @@ bool JitterReport::add(int64_t ns)
     idx = 0;
   }
 
+  // update topn. index 0-max_topn_ corresponds to top1-topn.
+  for (int i = 0; i < TOPN_SIZE; i++) {
+    if (ns < topn_ns_[i]) {
+      continue;
+    }
+    // shift backward from i index.
+    for (int j = TOPN_SIZE - 1; j > i; j--) {
+      topn_ns_[j] = topn_ns_[j - 1];
+      topn_idx_[j] = topn_idx_[j - 1];
+    }
+    // insert new data to i index;
+    topn_ns_[i] = ns;
+    topn_idx_[i] = cnt_;
+    break;
+  }
+
   histogram_[std::min(idx, bin_size_-1)] += 1;
   max_ns_ = std::max(max_ns_, ns);
   accum_ += ns;
   cnt_++;
+
   return max_ns_ == ns;
 }
 
@@ -60,6 +77,17 @@ void JitterReport::print(const std::string & prefix)
                 {
                   std::cout << x << ", ";
                 });
+  std::cout << std::endl;
+
+  std::cout << "  topn  ns \n idx" << std::endl;
+  for (int i=0 ; i< TOPN_SIZE ; i++) {
+    std::cout << topn_ns_[i] << ",";
+  }
+  std::cout << std::endl;
+  for (int i = 0; i < TOPN_SIZE; i++) {
+    std::cout << topn_idx_[i] << ",";
+  }
+
   std::cout << std::endl;
   std::cout << std::endl;
 
