@@ -212,10 +212,11 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
 
 void TwoWaysNode::setup_pong_subscriber()
 {
+  auto debug_print = get_parameter(DEBUG_PRINT).get_value<bool>();
   auto topic_name_pong = tw_options_.topic_name_pong;
   auto qos = tw_options_.qos;
   auto callback_pong_sub =
-      [this](const twmsgs::msg::Data::UniquePtr msg) -> void
+      [this, debug_print](const twmsgs::msg::Data::UniquePtr msg) -> void
       {
         struct timespec now;
         getnow(&now);
@@ -240,6 +241,17 @@ void TwoWaysNode::setup_pong_subscriber()
         getnow(&time_exit);
         subtract_timespecs(&time_exit, &now, &time_exit);
         pong_callback_process_time_report_.add(_timespec_to_uint64(&time_exit));
+
+        if (debug_print) {
+          struct timespec time_print;
+          getnow(&time_print);
+          std::cout << "time_print.tv_sec: " << time_print.tv_sec << " "
+                    << "time_print.tv_nsec: " << time_print.tv_nsec
+                    << std::endl;
+          std::cout << "recv pong id = " << pong_sub_count_ << " @"
+                    << _timespec_to_uint64(&time_print) << " ping-pong @ "
+                    << (now_ns - msg->time_sent_ns) << std::endl;
+        }
       };
 
   rclcpp::SubscriptionOptions subscription_options;
