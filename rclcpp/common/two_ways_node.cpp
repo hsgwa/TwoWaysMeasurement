@@ -118,7 +118,7 @@ void TwoWaysNode::setup_ping_publisher()
                     << "time_print.tv_nsec: " << time_print.tv_nsec << std::endl;
           std::cout << "sent ping id = " << ping_pub_count_
                     << " @" << _timespec_to_uint64(&time_print)
-                    << " waked-up @ " << latency
+                    << " wake-up @ " << latency
                     << std::endl;
         }
 
@@ -180,13 +180,13 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
           ping_late += 1;
         }
 
-        if(debug_print) {
-          struct timespec time_print;
-          getnow(&time_print);
-          std::cout << "recv ping id = " << msg->data
-                    << " @" << now_ns
-                    << std::endl;
-        }
+        // if(debug_print) {
+        //   struct timespec time_print;
+        //   getnow(&time_print);
+        //   std::cout << "recv ping id = " << msg->data
+        //             << " @" << now_ns
+        //             << std::endl;
+        // }
 
         if (!send_pong_) {
           return;
