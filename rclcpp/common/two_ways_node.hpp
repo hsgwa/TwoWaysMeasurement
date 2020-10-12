@@ -26,6 +26,7 @@ public:
 
   void print_ping_wakeup_report() {
     ping_wakeup_report_.print("ping_wakeup");
+    std::cout << "ping_deadline_count: " << ping_deadline_count << std::endl << std::endl;
   }
   void print_diff_wakeup_report() {
     diff_wakeup_report_.print("diff_wakeup");
@@ -47,6 +48,7 @@ public:
     std::cout << "pong_late: " << pong_late << std::endl;
     std::cout << "pong_sub_count_: " << pong_sub_count_ << std::endl;
     std::cout << "pong_argmax: " << pong_argmax_ << std::endl << std::endl;
+    std::cout << "pong_deadline_count: " << pong_deadline_count << std::endl << std::endl;
   }
   void print_ping_pong_report() {
     ping_pong_report_.print("ping_pong");
@@ -111,6 +113,8 @@ private:
   // how many times pong late
   uint64_t pong_late;
 
+  uint64_t ping_deadline_count; // ping publisher deadline
+  uint64_t pong_deadline_count; // pong subscriber deadline
 
   // wakeup jitter report
   JitterReportWithSkip ping_wakeup_report_;

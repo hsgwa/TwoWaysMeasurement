@@ -6,6 +6,7 @@ using rclcpp::strategies::message_pool_memory_strategy::MessagePoolMemoryStrateg
 
 
 const std::string PERIOD_NS = "period_ns";
+const std::string DL_PERIOD_NS = "dl_period_ns";
 const std::string NUM_LOOPS = "num_loops";
 const std::string DEBUG_PRINT = "debug_print";
 
@@ -21,9 +22,11 @@ TwoWaysNode::TwoWaysNode(
       pong_pub_count_(0), pong_sub_count_(0),
       send_pong_(false),
       ping_drop(0), ping_drop_gap_(0), ping_argdrop_(0), ping_late(0),
-      pong_drop(0), pong_drop_gap_(0), pong_argdrop_(0), pong_late(0)
+      pong_drop(0), pong_drop_gap_(0), pong_argdrop_(0), pong_late(0),
+      ping_deadline_count(0), pong_deadline_count(0)
 {
   declare_parameter(PERIOD_NS, 10 * 1000 * 1000);
+  declare_parameter(DL_PERIOD_NS, 10 * 1000 * 1000);
   declare_parameter(NUM_LOOPS, 10000);
   declare_parameter(DEBUG_PRINT, false);
 
@@ -54,14 +57,24 @@ void TwoWaysNode::setup_ping_publisher()
   auto topic_name = this->tw_options_.topic_name;
   auto qos = this->tw_options_.qos;
   auto period_ns = get_parameter(PERIOD_NS).get_value<int>();
+  auto dl_period_ns = get_parameter(DL_PERIOD_NS).get_value<int>();
   auto num_loops = get_parameter(NUM_LOOPS).get_value<int>();
   auto debug_print = get_parameter(DEBUG_PRINT).get_value<bool>();
 
   std::cout << PERIOD_NS   << ": " << period_ns << std::endl;
-  std::cout << NUM_LOOPS   << ": " << num_loops << std::endl;
+  std::cout << DL_PERIOD_NS << ": " << dl_period_ns << std::endl;
+  std::cout << NUM_LOOPS << ": " << num_loops << std::endl;
   std::cout << DEBUG_PRINT << ": " << (debug_print ? "true" : "false") << std::endl;
 
-  ping_pub_ = create_publisher<twmsgs::msg::Data>(topic_name, qos);
+  rclcpp::PublisherOptions options;
+  qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
+  options.event_callbacks.deadline_callback =
+      [this](rclcpp::QOSDeadlineOfferedInfo &event) {
+        (void) event;
+        this->ping_deadline_count++;
+      };
+
+  ping_pub_ = create_publisher<twmsgs::msg::Data>(topic_name, qos, options);
 
   auto callback_timer =
       [this, period_ns, num_loops, debug_print]() -> void
@@ -143,7 +156,8 @@ void TwoWaysNode::setup_ping_publisher()
   period_ts_.tv_nsec = tw_options_.period_ns;
   add_timespecs(&epoch_ts_, &period_ts_, &expect_ts_);
   last_wake_ts_ = epoch_ts_;
-  this->ping_timer_ = this->create_wall_timer(std::chrono::nanoseconds(period_ns), callback_timer);
+  this->ping_timer_ = this->create_wall_timer(
+      std::chrono::nanoseconds(period_ns), callback_timer);
 }
 
 void TwoWaysNode::setup_ping_subscriber(bool send_pong)
@@ -214,8 +228,10 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
 void TwoWaysNode::setup_pong_subscriber()
 {
   auto debug_print = get_parameter(DEBUG_PRINT).get_value<bool>();
+  auto dl_period_ns = get_parameter(DL_PERIOD_NS).get_value<int>();
   auto topic_name_pong = tw_options_.topic_name_pong;
   auto qos = tw_options_.qos;
+
   auto callback_pong_sub =
       [this, debug_print](const twmsgs::msg::Data::UniquePtr msg) -> void
       {
@@ -255,7 +271,14 @@ void TwoWaysNode::setup_pong_subscriber()
         }
       };
 
+
   rclcpp::SubscriptionOptions subscription_options;
+  qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
+  subscription_options.event_callbacks.deadline_callback =
+      [this](rclcpp::QOSDeadlineRequestedInfo &event) mutable {
+        (void)event;
+        this->pong_deadline_count++;
+      };
   pong_sub_ = create_subscription<twmsgs::msg::Data>(
       topic_name_pong, qos, callback_pong_sub, subscription_options);
 }
