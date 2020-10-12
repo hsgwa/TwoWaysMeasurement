@@ -71,12 +71,12 @@ void TwoWaysNode::setup_ping_publisher()
   std::cout << DEBUG_PRINT << ": " << (debug_print ? "true" : "false") << std::endl;
 
   rclcpp::PublisherOptions options;
-  qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
-  options.event_callbacks.deadline_callback =
-      [this](rclcpp::QOSDeadlineOfferedInfo &event) {
-        (void) event;
-        this->ping_deadline_count++;
-      };
+  // qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
+  // options.event_callbacks.deadline_callback =
+  //     [this](rclcpp::QOSDeadlineOfferedInfo &event) {
+  //       (void) event;
+  //       this->ping_deadline_count++;
+  //     };
 
   ping_pub_ = create_publisher<twmsgs::msg::Data>(topic_name, qos, options);
   busy_pub_ = create_publisher<std_msgs::msg::UInt64>(topic_name_busy_loop, qos);
@@ -185,9 +185,9 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
   send_pong_ = send_pong;
   if (send_pong) {
     rclcpp::PublisherOptions options;
-    qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
-    options.event_callbacks.deadline_callback =
-        [](rclcpp::QOSDeadlineOfferedInfo &event) {(void)event;};
+    // qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
+    // options.event_callbacks.deadline_callback =
+    //     [](rclcpp::QOSDeadlineOfferedInfo &event) {(void)event;};
     pong_pub_ = create_publisher<twmsgs::msg::Data>(topic_name_pong, qos, options);
   }
 
@@ -239,9 +239,9 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
       };
 
   rclcpp::SubscriptionOptions subscription_options;
-  qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
-  subscription_options.event_callbacks.deadline_callback =
-      [](rclcpp::QOSDeadlineRequestedInfo &event) {(void)event;};
+  // qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
+  // subscription_options.event_callbacks.deadline_callback =
+  //     [](rclcpp::QOSDeadlineRequestedInfo &event) {(void)event;};
 
   ping_sub_ = create_subscription<twmsgs::msg::Data>(
       topic_name, qos, callback_sub, subscription_options);
@@ -295,12 +295,12 @@ void TwoWaysNode::setup_pong_subscriber()
 
 
   rclcpp::SubscriptionOptions subscription_options;
-  qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
-  subscription_options.event_callbacks.deadline_callback =
-      [this](rclcpp::QOSDeadlineRequestedInfo &event) mutable {
-        (void)event;
-        this->pong_deadline_count++;
-      };
+  // qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
+  // subscription_options.event_callbacks.deadline_callback =
+  //     [this](rclcpp::QOSDeadlineRequestedInfo &event) mutable {
+  //       (void)event;
+  //       this->pong_deadline_count++;
+  //     };
   pong_sub_ = create_subscription<twmsgs::msg::Data>(
       topic_name_pong, qos, callback_pong_sub, subscription_options);
 }
