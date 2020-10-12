@@ -185,11 +185,16 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
   auto topic_name_pong = tw_options_.topic_name_pong;
   auto qos = tw_options_.qos;
   auto debug_print = get_parameter(DEBUG_PRINT).get_value<bool>();
+  auto dl_period_ns = get_parameter(DL_PERIOD_NS).get_value<int>();
 
   // pong publisher
   send_pong_ = send_pong;
   if (send_pong) {
-    pong_pub_ = create_publisher<twmsgs::msg::Data>(topic_name_pong, qos);
+    rclcpp::PublisherOptions options;
+    qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
+    options.event_callbacks.deadline_callback =
+        [](rclcpp::QOSDeadlineOfferedInfo &event) {(void)event;};
+    pong_pub_ = create_publisher<twmsgs::msg::Data>(topic_name_pong, qos, options);
   }
 
   // subscriber callback
@@ -240,6 +245,10 @@ void TwoWaysNode::setup_ping_subscriber(bool send_pong)
       };
 
   rclcpp::SubscriptionOptions subscription_options;
+  qos.deadline(rclcpp::Duration(std::chrono::nanoseconds(dl_period_ns)));
+  subscription_options.event_callbacks.deadline_callback =
+      [](rclcpp::QOSDeadlineRequestedInfo &event) {(void)event;};
+
   ping_sub_ = create_subscription<twmsgs::msg::Data>(
       topic_name, qos, callback_sub, subscription_options);
 }
