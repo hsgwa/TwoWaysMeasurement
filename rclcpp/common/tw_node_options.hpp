@@ -62,6 +62,7 @@ public:
   std::string namespace_;
   std::string topic_name;
   std::string topic_name_pong;
+  std::string topic_name_busy_loop;
   std::string service_name;
   rclcpp::QoS qos;
 

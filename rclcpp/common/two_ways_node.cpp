@@ -9,6 +9,7 @@ const std::string PERIOD_NS = "period_ns";
 const std::string DL_PERIOD_NS = "dl_period_ns";
 const std::string NUM_LOOPS = "num_loops";
 const std::string DEBUG_PRINT = "debug_print";
+const std::string BUSY_LOOPS = "busy_loops";
 
 TwoWaysNode::TwoWaysNode(
     const std::string name,
@@ -29,6 +30,7 @@ TwoWaysNode::TwoWaysNode(
   declare_parameter(DL_PERIOD_NS, 10 * 1000 * 1000);
   declare_parameter(NUM_LOOPS, 10000);
   declare_parameter(DEBUG_PRINT, false);
+  declare_parameter(BUSY_LOOPS, 0);
 
   // setup reports
   JitterReportWithSkip* reports[] = {
@@ -56,10 +58,12 @@ void TwoWaysNode::setup_ping_publisher()
 {
   auto topic_name = this->tw_options_.topic_name;
   auto qos = this->tw_options_.qos;
+  auto topic_name_busy_loop = tw_options_.topic_name_busy_loop;
   auto period_ns = get_parameter(PERIOD_NS).get_value<int>();
   auto dl_period_ns = get_parameter(DL_PERIOD_NS).get_value<int>();
   auto num_loops = get_parameter(NUM_LOOPS).get_value<int>();
   auto debug_print = get_parameter(DEBUG_PRINT).get_value<bool>();
+  auto busy_loops = get_parameter(BUSY_LOOPS).get_value<int>();
 
   std::cout << PERIOD_NS   << ": " << period_ns << std::endl;
   std::cout << DL_PERIOD_NS << ": " << dl_period_ns << std::endl;
@@ -75,9 +79,10 @@ void TwoWaysNode::setup_ping_publisher()
       };
 
   ping_pub_ = create_publisher<twmsgs::msg::Data>(topic_name, qos, options);
+  busy_pub_ = create_publisher<std_msgs::msg::UInt64>(topic_name_busy_loop, qos);
 
   auto callback_timer =
-      [this, period_ns, num_loops, debug_print]() -> void
+      [this, period_ns, num_loops, debug_print, busy_loops]() -> void
       {
         struct timespec time_wake_ts;
         getnow(&time_wake_ts);
@@ -105,6 +110,9 @@ void TwoWaysNode::setup_ping_publisher()
         add_timespecs(&epoch_ts_, &period_ts_, &expect_ts_);
         ping_pub_count_++;
         last_wake_ts_ = time_wake_ts;
+
+
+        auto msg_busy = std::make_unique<std_msgs::msg::UInt64>();
 
         if (this->tw_options_.use_loaning_) {
           auto msg = ping_pub_->borrow_loaned_message();
@@ -148,7 +156,11 @@ void TwoWaysNode::setup_ping_publisher()
         if(ping_pub_count_ == num_loops) {
           std::raise(SIGINT);
         }
-      };
+    if (busy_loops > 0) {
+      msg_busy->data = busy_loops;
+      this->busy_pub_->publish(std::move(msg_busy));
+    }
+  };
 
   // set timer
   getnow(&epoch_ts_);
@@ -158,6 +170,13 @@ void TwoWaysNode::setup_ping_publisher()
   last_wake_ts_ = epoch_ts_;
   this->ping_timer_ = this->create_wall_timer(
       std::chrono::nanoseconds(period_ns), callback_timer);
+
+  busy_sub_ = create_subscription<std_msgs::msg::UInt64>(
+      topic_name_busy_loop, qos, [](std_msgs::msg::UInt64::UniquePtr msg) {
+        uint64_t i;
+        for (i = 0 ; i < msg->data ; i++)
+          ;
+      });
 }
 
 void TwoWaysNode::setup_ping_subscriber(bool send_pong)

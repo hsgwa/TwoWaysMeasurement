@@ -174,6 +174,7 @@ TwoWaysNodeOptions::TwoWaysNodeOptions()
       use_loaning_(false), prefault_dynamic_size(209715200UL), // 200MB
       node_name("node"), node_name_pub("node_pub"), node_name_sub("node_sub"),
       namespace_("ns"), topic_name("ping"), topic_name_pong("pong"),
+      topic_name_busy_loop("busy_loop"),
       service_name("ping"), qos(rclcpp::QoS(1).best_effort()),
       period_ns(10 * 1000 * 1000), num_loops_(10000),
       array_size_(-1),

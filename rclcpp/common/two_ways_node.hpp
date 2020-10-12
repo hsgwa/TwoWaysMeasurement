@@ -8,6 +8,7 @@
 #include "twmsgs/msg/data.hpp"
 #include "tw_node_options.hpp"
 #include "tw_utils.hpp"
+#include "std_msgs/msg/u_int64.hpp"
 
 class TwoWaysNode : public rclcpp::Node
 {
@@ -95,6 +96,8 @@ private:
   rclcpp::Subscription<twmsgs::msg::Data>::SharedPtr ping_sub_;
   rclcpp::Publisher<twmsgs::msg::Data>::SharedPtr pong_pub_;
   rclcpp::Subscription<twmsgs::msg::Data>::SharedPtr pong_sub_;
+  rclcpp::Publisher<std_msgs::msg::UInt64>::SharedPtr busy_pub_;
+  rclcpp::Subscription<std_msgs::msg::UInt64>::SharedPtr busy_sub_;
 
   bool send_pong_;
 
