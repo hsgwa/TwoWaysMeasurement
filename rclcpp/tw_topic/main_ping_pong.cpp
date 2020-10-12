@@ -277,6 +277,7 @@ int main(int argc, char *argv[])
   tw_options.main_thread_.report();
   tw_options.sig_handler_thread_.report();
   tw_options.dds_thread_.report();
+  tw_options.busy_thread_.report();
   if (tw_options.run_type == T2N2 ) {
     tw_options.ping_thread_.report();
     tw_options.pong_thread_.report();
@@ -295,10 +296,11 @@ int main(int argc, char *argv[])
   std::shared_ptr<std::thread> busy_thread;
   std::shared_ptr<BusyLoopNode> busy_loop;
   if (tw_options.run_type != E2_PONG) {
-    tw_options.busy_thread_.setup(pthread_self());
+    tw_options.dds_thread_.setup(pthread_self());
     busy_loop = std::make_shared<BusyLoopNode>("busy_loop", "ns", tw_options);
     auto busy_exec = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     busy_exec->add_node(busy_loop);
+    tw_options.busy_thread_.setup(pthread_self());
     busy_thread = std::make_shared<std::thread>(&rclcpp::Executor::spin, busy_exec);
   }
 
