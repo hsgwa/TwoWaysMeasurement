@@ -47,6 +47,7 @@ public:
   ThreadOptions dds_thread_;
   ThreadOptions ping_thread_;
   ThreadOptions pong_thread_;
+  ThreadOptions busy_thread_;
 
   // executor
   int use_static_executor;

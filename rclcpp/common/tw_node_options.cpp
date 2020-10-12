@@ -42,6 +42,8 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
       {"array-size", required_argument, 0, 'y'},
       {"ros-args", required_argument, 0, 'z'},
       {"bin-size", required_argument, 0, 'b'},
+      {"busy-core", required_argument, 0, 'c'},
+      {"busy-priority", required_argument, 0, 'd'},
       {0, 0, 0, 0},
   };
 
@@ -67,6 +69,13 @@ TwoWaysNodeOptions::TwoWaysNodeOptions(int argc, char *argv[])
         bin_size = tmp;
         needs_reinit = true;
       }
+      break;
+    case ('c'): // busy-core
+      busy_thread_.affinity_ = std::stoi(optarg);
+      break;
+    case ('d'): // busy-priority
+      busy_thread_.priority_ = std::stoi(optarg);
+      busy_thread_.policy_ = real_time_policy_;
       break;
     case ('i'):  // round-ns
       tmp = std::stoi(optarg);
@@ -170,6 +179,7 @@ TwoWaysNodeOptions::TwoWaysNodeOptions()
       dds_thread_("dds"),
       ping_thread_("ping"),
       pong_thread_("pong"),
+      busy_thread_("busy"),
       use_static_executor(FALSE),
       use_loaning_(false), prefault_dynamic_size(209715200UL), // 200MB
       node_name("node"), node_name_pub("node_pub"), node_name_sub("node_sub"),

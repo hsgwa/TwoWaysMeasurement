@@ -225,6 +225,30 @@ class RusageCounter {
   struct rusage end_;
 };
 
+class BusyLoopNode : public rclcpp::Node
+{
+ public:
+  BusyLoopNode(std::string namespace_)
+      :Node(namespace_, rclcpp::NodeOptions().use_intra_process_comms(true))
+            ,qos(rclcpp::QoS(1).best_effort())
+  {
+    std::string topic_name_busy_loop = "busy_loop";
+    auto callback = [](std_msgs::msg::UInt64::UniquePtr msg) {
+      uint64_t i;
+      for (i = 0; i < msg->data; i++)
+        ;
+    };
+
+    rclcpp::NodeOptions node_options;
+    node_options.use_intra_process_comms(true);
+    busy_sub_ = create_subscription<std_msgs::msg::UInt64>(topic_name_busy_loop,
+                                                           qos, callback);
+  }
+
+ private:
+   rclcpp::Subscription<std_msgs::msg::UInt64>::SharedPtr busy_sub_;
+   rclcpp::QoS qos;
+};
 
 int main(int argc, char *argv[])
 {
@@ -247,6 +271,14 @@ int main(int argc, char *argv[])
   rclcpp::init(argc, argv);
 
   RusageCounter rusageCounter;
+
+  tw_options.busy_thread_.setup(pthread_self());
+  auto busy_exec = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+  busy_exec->add_node(std::make_shared<BusyLoopNode>("ns"));
+  std::shared_ptr<std::thread> busy_thread;
+  if (tw_options.run_type != E2_PONG) {
+    busy_thread = std::make_shared<std::thread>(&rclcpp::Executor::spin, busy_exec);
+  }
 
   if(tw_options.run_type != T2N2) {
     // setup dds process scheule
@@ -302,6 +334,9 @@ int main(int argc, char *argv[])
     runner_pong->report();
 
     rusageCounter.report();
+  }
+  if (busy_thread) {
+    busy_thread->join();
   }
 
   rclcpp::shutdown();

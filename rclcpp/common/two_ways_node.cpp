@@ -171,12 +171,6 @@ void TwoWaysNode::setup_ping_publisher()
   this->ping_timer_ = this->create_wall_timer(
       std::chrono::nanoseconds(period_ns), callback_timer);
 
-  busy_sub_ = create_subscription<std_msgs::msg::UInt64>(
-      topic_name_busy_loop, qos, [](std_msgs::msg::UInt64::UniquePtr msg) {
-        uint64_t i;
-        for (i = 0 ; i < msg->data ; i++)
-          ;
-      });
 }
 
 void TwoWaysNode::setup_ping_subscriber(bool send_pong)
