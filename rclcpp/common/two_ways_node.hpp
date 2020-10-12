@@ -27,6 +27,7 @@ public:
 
   void print_ping_wakeup_report() {
     ping_wakeup_report_.print("ping_wakeup");
+    std::cout << "ping_pub_count_: " << ping_pub_count_ << std::endl;
     std::cout << "ping_deadline_count: " << ping_deadline_count << std::endl << std::endl;
   }
   void print_diff_wakeup_report() {
