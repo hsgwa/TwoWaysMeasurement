@@ -1,11 +1,12 @@
 #include <chrono>
 #include <memory>
-#include <time.h>
-#include <vector>
 #include <numeric>
-#include <thread>
+#include <rttest/utils.hpp>
 #include <sched.h>
 #include <sys/resource.h>
+#include <thread>
+#include <time.h>
+#include <vector>
 
 #include "../common/tw_utils.hpp"
 #include "../common/two_ways_node.hpp"
@@ -228,26 +229,44 @@ class RusageCounter {
 class BusyLoopNode : public rclcpp::Node
 {
  public:
-  BusyLoopNode(std::string namespace_)
-      :Node(namespace_, rclcpp::NodeOptions().use_intra_process_comms(true))
-            ,qos(rclcpp::QoS(1).best_effort())
-  {
-    std::string topic_name_busy_loop = "busy_loop";
-    auto callback = [](std_msgs::msg::UInt64::UniquePtr msg) {
-      uint64_t i;
-      for (i = 0; i < msg->data; i++)
-        ;
-    };
+  BusyLoopNode(std::string name_, std::string namespace_, const TwoWaysNodeOptions &tw_options)
+      : Node(name_, namespace_, rclcpp::NodeOptions().use_intra_process_comms(true)),
+         tw_options_(tw_options),
+         qos(rclcpp::QoS(1).best_effort()) {
+     std::string topic_name_busy_loop = "busy_loop";
 
-    rclcpp::NodeOptions node_options;
-    node_options.use_intra_process_comms(true);
-    busy_sub_ = create_subscription<std_msgs::msg::UInt64>(topic_name_busy_loop,
-                                                           qos, callback);
+     busy_report_.init(tw_options.common_report_option.bin,
+                        tw_options.common_report_option.round_ns,
+                        tw_options.common_report_option.num_skip);
+
+     auto callback = [this](std_msgs::msg::UInt64::UniquePtr msg) {
+       uint64_t i;
+       struct timespec time_wake_ts;
+       getnow(&time_wake_ts);
+
+       for (i = 0; i < msg->data; i++)
+         ;
+
+       struct timespec time_exit;
+       getnow(&time_exit);
+       subtract_timespecs(&time_exit, &time_wake_ts, &time_exit);
+       this->busy_report_.add(_timespec_to_uint64(&time_exit));
+     };
+
+     rclcpp::NodeOptions node_options;
+     node_options.use_intra_process_comms(true);
+     busy_sub_ = create_subscription<std_msgs::msg::UInt64>(
+         topic_name_busy_loop, qos, callback);
+   }
+  void report() {
+    busy_report_.print("busy_loop");
   }
 
- private:
-   rclcpp::Subscription<std_msgs::msg::UInt64>::SharedPtr busy_sub_;
-   rclcpp::QoS qos;
+private:
+  rclcpp::Subscription<std_msgs::msg::UInt64>::SharedPtr busy_sub_;
+  const TwoWaysNodeOptions &tw_options_;
+  rclcpp::QoS qos;
+  JitterReportWithSkip busy_report_;
 };
 
 int main(int argc, char *argv[])
@@ -272,11 +291,14 @@ int main(int argc, char *argv[])
 
   RusageCounter rusageCounter;
 
-  tw_options.busy_thread_.setup(pthread_self());
-  auto busy_exec = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
-  busy_exec->add_node(std::make_shared<BusyLoopNode>("ns"));
+
   std::shared_ptr<std::thread> busy_thread;
+  std::shared_ptr<BusyLoopNode> busy_loop;
   if (tw_options.run_type != E2_PONG) {
+    tw_options.busy_thread_.setup(pthread_self());
+    busy_loop = std::make_shared<BusyLoopNode>("busy_loop", "ns", tw_options);
+    auto busy_exec = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+    busy_exec->add_node(busy_loop);
     busy_thread = std::make_shared<std::thread>(&rclcpp::Executor::spin, busy_exec);
   }
 
@@ -336,6 +358,7 @@ int main(int argc, char *argv[])
     rusageCounter.report();
   }
   if (busy_thread) {
+    busy_loop->report();
     busy_thread->join();
   }
 
