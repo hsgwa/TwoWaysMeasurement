@@ -18,6 +18,7 @@ void JitterReport::init(int64_t bin_size, int64_t round_ns, int64_t min)
   round_ns_ = round_ns;
   min_ = min;
   max_ns_ = 0;
+  min_ns_ = std::numeric_limits<int64_t>::max();
   histogram_.resize(bin_size);
   accum_ = 0;
   cnt_ = 0;
