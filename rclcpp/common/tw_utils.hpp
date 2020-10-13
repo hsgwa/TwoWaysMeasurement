@@ -36,6 +36,7 @@ public:
   }
 
   int64_t get_max_ns() const { return max_ns_; }
+  int64_t get_min_ns() const { return min_ns_; }
   int64_t get_average() const { return accum_ / cnt_; }
 
 private:
@@ -48,6 +49,8 @@ private:
   std::vector<int64_t> histogram_;
   // max value
   int64_t max_ns_;
+  // min value
+  int64_t min_ns_;
   // accumurator & count to calculate average
   int64_t accum_;
   int64_t cnt_;

@@ -48,6 +48,7 @@ bool JitterReport::add(int64_t ns)
 
   histogram_[std::min(idx, bin_size_-1)] += 1;
   max_ns_ = std::max(max_ns_, ns);
+  min_ns_ = std::min(min_ns_, ns);
   accum_ += ns;
   cnt_++;
 
@@ -63,6 +64,7 @@ void JitterReport::print(const std::string & prefix)
 
   std::cout << prefix << std::endl;
   std::cout << "  max: " << max_ns_ << "[ns]" << std::endl;
+  std::cout << "  min: " << min_ns_ << "[ns]" << std::endl;
   std::cout << "  avg: " << accum_ / cnt_ << "[ns]" << std::endl;
 
   std::cout << "  histogram"
